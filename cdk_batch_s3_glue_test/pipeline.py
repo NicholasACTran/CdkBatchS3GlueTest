@@ -1,11 +1,10 @@
-import aws_cdk as cdk
 from aws_cdk import (
                      aws_codebuild as codebuild, 
                      aws_codepipeline as codepipeline,
                      aws_codepipeline_actions as codepipeline_actions,
                      aws_ssm as ssm,
-                     aws_ecr as ecr,
-                     App, Stack, CfnOutput, Size
+                     SecretValue,
+                     CfnOutput
                      )
 from constructs import Construct
 
@@ -29,7 +28,7 @@ class Pipeline(Construct):
         )
 
     def __createSourceStage__(self, stageName: str, output: codepipeline.Artifact) -> codepipeline.StageProps:
-        secret = cdk.SecretValue.secrets_manager('/github/dev/GITHUB_TOKEN', json_field='/github/dev/GITHUB_TOKEN')
+        secret = SecretValue.secrets_manager('/github/dev/GITHUB_TOKEN', json_field='/github/dev/GITHUB_TOKEN')
         repo = ssm.StringParameter.value_for_string_parameter(self, '/github/dev/GITHUB_REPO')
         owner = ssm.StringParameter.value_for_string_parameter(self, '/github/dev/GITHUB_OWNER')
         
@@ -116,4 +115,4 @@ class Pipeline(Construct):
         })
 
     def __output__(self):
-        cdk.CfnOutput(self, 'Pipeline ARN', value=self.pipeline.pipeline_arn)
+        CfnOutput(self, 'Pipeline ARN', value=self.pipeline.pipeline_arn)
