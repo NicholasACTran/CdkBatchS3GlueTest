@@ -3,6 +3,8 @@ from aws_cdk import (
                      aws_batch as batch,
                      aws_ecs as ecs,
                      aws_iam as iam,
+                     aws_events as events,
+                     aws_events_targets as events_targets,
                      CfnOutput, Size
                      )
 from constructs import Construct
@@ -16,22 +18,10 @@ class BatchWithFargate(Construct):
 
         self.__create_batch_compute_environments__(3)
 
-        # Task execution IAM role for Fargate
-        task_execution_role = iam.Role(self, "TaskExecutionRole",
-                                  assumed_by=iam.ServicePrincipal(
-                                      "ecs-tasks.amazonaws.com"),
-                                  managed_policies=[iam.ManagedPolicy.from_aws_managed_policy_name("service-role/AmazonECSTaskExecutionRolePolicy")])
-
         # Create Job Definition to submit job in batch job queue.
-        self.batch_jobDef = batch.EcsJobDefinition(self, "MyJobDef",
-                                           container=batch.EcsFargateContainerDefinition(self, "FargateCDKJobDef",
-                                               image=ecs.ContainerImage.from_ecr_repository(ecrRepo),
-                                               command=["python", "test.py"],
-                                               memory=Size.mebibytes(512),
-                                               cpu=0.25,
-                                               execution_role=task_execution_role
-                                           )
-        )
+        self.batch_jobDef = self.__create_batch_job_definition_(ecrRepo)
+
+        self.__create_batch_job_on_push__(ecrRepo)
 
         self.__output__()
 
@@ -49,6 +39,54 @@ class BatchWithFargate(Construct):
             )
 
             self.batch_queue.add_compute_environment(fargate_spot_environment, i)
+    
+    def __create_batch_job_definition_(self, ecrRepo) -> batch.EcsJobDefinition:
+        
+        # Task execution IAM role for Fargate
+        task_execution_role = iam.Role(
+            self, 
+            "TaskExecutionRole",
+            assumed_by=iam.ServicePrincipal("ecs-tasks.amazonaws.com"),
+            managed_policies=[
+                iam.ManagedPolicy.from_aws_managed_policy_name("service-role/AmazonECSTaskExecutionRolePolicy")
+                ]
+        )
+        
+        return batch.EcsJobDefinition(
+            self, 
+            "MyJobDef",
+            container=batch.EcsFargateContainerDefinition(
+                self,
+                "FargateCDKJobDef",
+                image=ecs.ContainerImage.from_ecr_repository(ecrRepo),
+                command=["python", "test.py"],
+                memory=Size.mebibytes(512),
+                cpu=0.25,
+                execution_role=task_execution_role
+            )
+        )
+    
+    def __create_batch_job_on_push__(self, ecrRepo):
+        event_pattern = events.EventPattern(
+            detail_type=['ECR Image Action'],
+            detail={
+                "result": ["SUCCESS"],
+                "action-type": ["PUSH"],
+                "image-tag": ["latest"],
+                "repository-name": [ecrRepo.repository_name]
+            }
+        )
+
+        ecr_batch_trigger_rule = events.Rule(
+            self, "ECR to Batch Rule",
+            description="Trigger a Batch job on push to ECR",
+            event_pattern=event_pattern,
+            targets=[events_targets.BatchJob(
+                job_queue_arn=self.batch_queue.job_queue_arn,
+                job_queue_scope=self.batch_queue,
+                job_definition_arn=self.batch_jobDef.job_definition_arn,
+                job_definition_scope=self.batch_jobDef
+            )])
 
     def __output__(self):
         CfnOutput(self, "BatchJobQueue",value=self.batch_queue.job_queue_name)
