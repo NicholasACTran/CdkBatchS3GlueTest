@@ -8,7 +8,7 @@ from aws_cdk import (
                      App, Stack, CfnOutput, Size
                      )
 from constructs import Construct
-from pipeline import Pipeline
+from cdk_batch_s3_glue_test.pipeline import Pipeline
 
 class CdkBatchS3GlueTestStack(Stack):
 
@@ -18,10 +18,12 @@ class CdkBatchS3GlueTestStack(Stack):
         user = iam.User(self, 'User')
         ecrRepo = ecr.Repository(self, 'TestRepo')
 
-        pipeline = Pipeline({
-            'id': 'TestPipeline',
-            'ecrRepo': ecrRepo
-        })
+        pipeline = Pipeline(
+            self,
+            # scope=scope,
+            id='TestPipeline',
+            ecrRepo=ecrRepo
+        )
         # ecrRepo.grantPullPush()
 
 

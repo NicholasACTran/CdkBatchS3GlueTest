@@ -14,32 +14,32 @@ class Pipeline(Construct):
         super().__init__(scope, id, **kwargs)
         self.ecrRepo = ecrRepo
         self.pipeline = self.__createPipeline__()
-        self.output()
+        self.__output__()
         pass
 
     def __createPipeline__(self) -> codepipeline.Pipeline:
         sourceOutput = codepipeline.Artifact()
         buildOutput = codepipeline.Artifact()
-        return codepipeline.Pipeline(self, 'Pipeline', {
-            'stages': [
+        return codepipeline.Pipeline(self, 'Pipeline', 
+            stages=[
                 self.__createSourceStage__('Source', sourceOutput),
                 self.__createImageBuildStage__('Build', sourceOutput, buildOutput),
                 # self.__createDeployStage__('Deploy', buildOutput)
             ]
-        })
+        )
 
     def __createSourceStage__(self, stageName: str, output: codepipeline.Artifact) -> codepipeline.StageProps:
-        secret = cdk.SecretValue.secretsManager('/github/dev/GITHUB_TOKEN')
-        repo = ssm.StringParameter.valueForStringParameter(self, '/github/dev/GITHUB_REPO')
-        owner = ssm.StringParameter.valueForStringParameter(self, '/github/dev/GITHUB_OWNER')
+        secret = cdk.SecretValue.secrets_manager('/github/dev/GITHUB_TOKEN', json_field='/github/dev/GITHUB_TOKEN')
+        repo = ssm.StringParameter.value_for_string_parameter(self, '/github/dev/GITHUB_REPO')
+        owner = ssm.StringParameter.value_for_string_parameter(self, '/github/dev/GITHUB_OWNER')
         
-        githubAction = codepipeline_actions.GitHubSourceAction({
-            'actionName': 'Github_Source',
-            'owner': owner,
-            'repo': repo,
-            'oauthToken': secret,
-            'output': output
-        })
+        githubAction = codepipeline_actions.GitHubSourceAction(
+            action_name='Github_Source',
+            owner=owner,
+            repo=repo,
+            oauth_token=secret,
+            output=output
+        )
 
         return {
             'stageName': stageName,
@@ -55,28 +55,27 @@ class Pipeline(Construct):
         project = codebuild.PipelineProject(
             self,
             'Project',
-            {
-                'buildSpec': self.__createBuildSpec__(),
-                'environment': {
-                    'buildImage': codebuild.LinuxBuildImage.STANDARD_2_0,
-                    'privileged': True
-                },
-                'environmentVariables': {
-                    'REPOSITORY_URI': {
-                        'value': self.ecrRepo.repositoryUri
-                    }
+            build_spec=self.__createBuildSpec__(),
+            environment={
+                'build_image': codebuild.LinuxBuildImage.STANDARD_2_0,
+                'privileged': True
+            },
+            environment_variables={
+                'REPOSITORY_URI': {
+                    'value': self.ecrRepo.repository_uri
                 }
             }
+            
         )
 
-        self.ecrRepo.grantPullPush(project.grantPrincipal)
+        self.ecrRepo.grant_pull_push(project.grant_principal)
 
-        codebuildAction = codepipeline_actions.CodeBuildAction({
-            'actionName': 'CodeBuild_Action',
-            'input': input,
-            'outputs': [output],
-            'project': project
-        })
+        codebuildAction = codepipeline_actions.CodeBuildAction(
+            action_name='CodeBuild_Action',
+            input=input,
+            outputs=[output],
+            project=project
+        )
 
         return {
             'stageName': stageName,
@@ -84,29 +83,30 @@ class Pipeline(Construct):
         }
     
     def __createBuildSpec__(self) -> codebuild.BuildSpec:
-        return codebuild.BuildSpec.fromObject({
+        return codebuild.BuildSpec.from_object({
             'version': '0.2',
             'phases': {
                 'install': {
                     'runtime-versions': {
-                        'nodejs': '10',
-                        'php': '7.3'
+                        'nodejs': '18',
+                        # 'php': '7.3'
                     },
                     'commands': [
                         'npm install',
-                        'composer install',
+                        # 'composer install',
                     ],
                 },
                 'pre_build': {
                     'commands': [
                         'aws --version',
-                        '$(aws ecr get-login --region ${AWS_DEFAULT_REGION} --no-include-email |  sed \'s|https://||\')',
+                        '$(aws ecr get-login --region us-east-1 --no-include-email |  sed \'s|https://||\')',
                         'COMMIT_HASH=$(echo $CODEBUILD_RESOLVED_SOURCE_VERSION | cut -c 1-7)',
                         'IMAGE_TAG=${COMMIT_HASH:=latest}'
                     ]
                 },
                 'build': {
                     'commands': [
+                        'cd src'
                         'docker build -t $REPOSITORY_URI:latest .',
                         'docker tag $REPOSITORY_URI:latest $REPOSITORY_URI:$IMAGE_TAG',
                     ]
@@ -127,6 +127,4 @@ class Pipeline(Construct):
         })
 
     def __output__(self):
-        cdk.CfnOutput(self, 'Pipeline ARN', {
-            'value': self.pipeline.pipelineArn
-        })
+        cdk.CfnOutput(self, 'Pipeline ARN', value=self.pipeline.pipeline_arn)
