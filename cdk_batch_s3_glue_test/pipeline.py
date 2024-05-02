@@ -57,7 +57,7 @@ class Pipeline(Construct):
             'Project',
             build_spec=self.__createBuildSpec__(),
             environment={
-                'build_image': codebuild.LinuxBuildImage.STANDARD_2_0,
+                'build_image': codebuild.LinuxBuildImage.STANDARD_5_0,
                 'privileged': True
             },
             environment_variables={
@@ -87,26 +87,20 @@ class Pipeline(Construct):
             'version': '0.2',
             'phases': {
                 'install': {
-                    'runtime-versions': {
-                        'nodejs': '18',
-                        # 'php': '7.3'
-                    },
-                    'commands': [
-                        'npm install',
-                        # 'composer install',
-                    ],
+                    'runtime-versions': {},
+                    'commands': [],
                 },
                 'pre_build': {
                     'commands': [
                         'aws --version',
-                        '$(aws ecr get-login --region us-east-1 --no-include-email |  sed \'s|https://||\')',
+                        'aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin 934939427723.dkr.ecr.us-east-1.amazonaws.com',
                         'COMMIT_HASH=$(echo $CODEBUILD_RESOLVED_SOURCE_VERSION | cut -c 1-7)',
                         'IMAGE_TAG=${COMMIT_HASH:=latest}'
                     ]
                 },
                 'build': {
                     'commands': [
-                        'cd src'
+                        'cd src',
                         'docker build -t $REPOSITORY_URI:latest .',
                         'docker tag $REPOSITORY_URI:latest $REPOSITORY_URI:$IMAGE_TAG',
                     ]
@@ -115,14 +109,9 @@ class Pipeline(Construct):
                     'commands': [
                         'docker push $REPOSITORY_URI:latest',
                         'docker push $REPOSITORY_URI:$IMAGE_TAG',
-                        'printf "[{\\"name\\":\\"${CONTAINER_NAME}\\",\\"imageUri\\":\\"${REPOSITORY_URI}:latest\\"}]" > imagedefinitions.json'
+                        'printf "[{\\"name\\":\\"Test\\",\\"imageUri\\":\\"${REPOSITORY_URI}:latest\\"}]" > imagedefinitions.json'
                     ]
                 }
-            },
-            'artifacts': {
-                'files': [
-                    'imagedefinitions.json'
-                ]
             }
         })
 
