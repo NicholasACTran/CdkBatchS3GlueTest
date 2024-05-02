@@ -1,6 +1,6 @@
 FROM public.ecr.aws/docker/library/python:latest
 
-COPY test.py /
+COPY mondays.py /
 
 
 RUN pip install --upgrade pip && \

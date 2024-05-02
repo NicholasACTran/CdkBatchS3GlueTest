@@ -17,6 +17,7 @@ class CdkBatchS3GlueTestStack(Stack):
         bucket = s3.Bucket(
             self,
             'CDKBatchS3GlueTestBucket',
+            bucket_name='cdk-batch-s3-glue-test-bucket',
             block_public_access=s3.BlockPublicAccess.BLOCK_ALL,
             encryption=s3.BucketEncryption.S3_MANAGED,
             versioned=True,

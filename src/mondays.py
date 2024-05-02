@@ -67,7 +67,7 @@ if __name__ == '__main__':
     
     ds = datetime.now().strftime("%Y-%m-%d")
     dt = datetime.now().strftime("%Y_%m_%d_%H_%M_%S")
-    warehouse_s3path_dest = f"s3://CDKBatchS3GlueTestBucket/monday.com/items/{ds}/"
+    warehouse_s3path_dest = f"s3://cdk-batch-s3-glue-test-bucket/monday.com/items/{ds}/"
 
     secrets_client = boto3.client('secretsmanager')
     secret = secrets_client.get_secret_value('/api_keys/MONDAYS_COM')
