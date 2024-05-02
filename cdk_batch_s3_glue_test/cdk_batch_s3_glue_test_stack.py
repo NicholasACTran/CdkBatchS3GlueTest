@@ -1,7 +1,7 @@
 from aws_cdk import (
                      aws_ecr as ecr,
-                     aws_iam as iam,
-                     App, Stack
+                     aws_s3 as s3,
+                     App, Stack, RemovalPolicy
                      )
 from constructs import Construct
 
@@ -13,8 +13,15 @@ class CdkBatchS3GlueTestStack(Stack):
     def __init__(self, scope: Construct, id: str, **kwargs) -> None:
         super().__init__(scope, id, **kwargs)
 
-        user = iam.User(self, 'User')
         ecrRepo = ecr.Repository(self, 'TestRepo')
+        bucket = s3.Bucket(
+            self,
+            'CDKBatchS3GlueTestBucket',
+            block_public_access=s3.BlockPublicAccess.BLOCK_ALL,
+            encryption=s3.BucketEncryption.S3_MANAGED,
+            versioned=True,
+            removal_policy=RemovalPolicy.RETAIN
+        )
 
         pipeline = Pipeline(
             self,

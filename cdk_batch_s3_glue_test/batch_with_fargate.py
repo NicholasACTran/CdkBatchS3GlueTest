@@ -4,7 +4,7 @@ from aws_cdk import (
                      aws_ecs as ecs,
                      aws_iam as iam,
                      aws_events as events,
-                     aws_events_targets as events_targets,
+                     aws_events_targets as events_targets, 
                      CfnOutput, Size
                      )
 from constructs import Construct
@@ -49,7 +49,16 @@ class BatchWithFargate(Construct):
             assumed_by=iam.ServicePrincipal("ecs-tasks.amazonaws.com"),
             managed_policies=[
                 iam.ManagedPolicy.from_aws_managed_policy_name("service-role/AmazonECSTaskExecutionRolePolicy")
-                ]
+            ]
+        )
+
+        task_role = iam.Role(
+            self,
+            "TaskRole",
+            assumed_by=iam.ServicePrincipal("ecs-tasks.amazonaws.com"),
+            managed_policies=[
+                iam.ManagedPolicy.from_aws_managed_policy_name("AmazonS3FullAccess")
+            ]
         )
         
         return batch.EcsJobDefinition(
@@ -59,10 +68,11 @@ class BatchWithFargate(Construct):
                 self,
                 "FargateCDKJobDef",
                 image=ecs.ContainerImage.from_ecr_repository(ecrRepo),
-                command=["python", "test.py"],
+                command=["python", "mondays.py"],
                 memory=Size.mebibytes(512),
                 cpu=0.25,
-                execution_role=task_execution_role
+                execution_role=task_execution_role,
+                job_role=task_role
             )
         )
     

@@ -22,8 +22,7 @@ class Pipeline(Construct):
         return codepipeline.Pipeline(self, 'Pipeline', 
             stages=[
                 self.__createSourceStage__('Source', sourceOutput),
-                self.__createImageBuildStage__('Build', sourceOutput, buildOutput),
-                # self.__createDeployStage__('Deploy', buildOutput)
+                self.__createImageBuildStage__('Build', sourceOutput, buildOutput)
             ]
         )
 
