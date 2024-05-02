@@ -1,4 +1,4 @@
-FROM python
+FROM public.ecr.aws/docker/library/python:latest
 
 COPY test.py /
 
