@@ -7,6 +7,7 @@ from constructs import Construct
 
 from cdk_batch_s3_glue_test.pipeline import Pipeline
 from cdk_batch_s3_glue_test.batch_with_fargate import BatchWithFargate
+from cdk_batch_s3_glue_test.glue_workflow import GlueWorkflow
 
 class CdkBatchS3GlueTestStack(Stack):
 
@@ -20,6 +21,7 @@ class CdkBatchS3GlueTestStack(Stack):
             bucket_name='cdk-batch-s3-glue-test-bucket',
             block_public_access=s3.BlockPublicAccess.BLOCK_ALL,
             encryption=s3.BucketEncryption.S3_MANAGED,
+            event_bridge_enabled=True,
             versioned=True,
             removal_policy=RemovalPolicy.RETAIN
         )
@@ -34,6 +36,12 @@ class CdkBatchS3GlueTestStack(Stack):
             self, 
             id="TestJob", 
             ecrRepo=ecrRepo
+        )
+
+        glue_workflow = GlueWorkflow(
+            self,
+            id="TestWorkflow",
+            s3_bucket=bucket
         )
 
 app = App()
