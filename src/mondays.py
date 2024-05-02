@@ -89,17 +89,32 @@ if __name__ == '__main__':
             .get("items", None)
         )
 
+        normalized_data = []
+
+        for item in data:
+            flattened_item = {
+                i['id']:{
+                    'text': i['text'],
+                    'type': i['type'],
+                    'value': i['value']
+                } for i in item['column_values']
+            }
+            flattened_item['id'] = item['id']
+            flattened_item['created_at'] = item['created_at']
+            flattened_item['name'] = item['name']
+            flattened_item['board'] = item['board']
+            normalized_data.append(flattened_item)
+
         if board_id == board_ids[0]:
             df = pd.json_normalize(data)
         else:
             tmp_df = pd.json_normalize(data)
             df = pd.concat([df, tmp_df])
-        
-        print(df)
 
     df.rename(columns={"board.id": "board_id"}, inplace=True)
     df['loaded_at'] = datetime.now()
     df['loaded_at'] = df['loaded_at'].dt.strftime('%Y-%m-%dT%H:%M:%SZ')
+    print(df)
 
     print(f"The table shape: {df.shape}")
 
