@@ -71,7 +71,7 @@ if __name__ == '__main__':
 
     secrets_client = boto3.client('secretsmanager')
     secret = secrets_client.get_secret_value(SecretId='/api_keys/MONDAYS_COM')
-    API_KEY = json.loads(secret)['/api_keys/MONDAYS_COM']
+    API_KEY = secret['/api_keys/MONDAYS_COM']
 
     api_url = "https://api.monday.com/v2"
     headers = {"Authorization": API_KEY}
