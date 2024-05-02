@@ -106,12 +106,16 @@ if __name__ == '__main__':
             normalized_data.append(flattened_item)
 
         if board_id == board_ids[0]:
-            df = pd.json_normalize(data)
+            df = pd.json_normalize(normalized_data)
         else:
-            tmp_df = pd.json_normalize(data)
+            tmp_df = pd.json_normalize(normalized_data)
             df = pd.concat([df, tmp_df])
 
-    df.rename(columns={"board.id": "board_id"}, inplace=True)
+    normalized_columns = {}
+    for column_name in df:
+        if '.' in column_name:
+            normalized_columns[column_name] = column_name.replace('.','_')
+    df.rename(columns=normalized_columns, inplace=True)
     df['loaded_at'] = datetime.now()
     df['loaded_at'] = df['loaded_at'].dt.strftime('%Y-%m-%dT%H:%M:%SZ')
     print(df)
