@@ -70,7 +70,7 @@ if __name__ == '__main__':
     warehouse_s3path_dest = f"s3://cdk-batch-s3-glue-test-bucket/monday.com/items/{ds}/"
 
     secrets_client = boto3.client('secretsmanager')
-    secret = secrets_client.get_secret_value('/api_keys/MONDAYS_COM')
+    secret = secrets_client.get_secret_value(SecretId='/api_keys/MONDAYS_COM')
     API_KEY = json.loads(secret)['/api_keys/MONDAYS_COM']
 
     api_url = "https://api.monday.com/v2"
