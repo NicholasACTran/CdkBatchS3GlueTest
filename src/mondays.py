@@ -34,7 +34,7 @@ def get_first_items_page(apiUrl, headers, board_id):
 
     data = {"query": query_item}
     r = requests.post(url=apiUrl, json=data, headers=headers)
-    # print(r.json())
+    print(r.json())
     return r.json()
 
 def write_parquet_to_s3(file_name_str, df, dest_s3path_str):

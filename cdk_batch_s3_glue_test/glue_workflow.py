@@ -14,10 +14,15 @@ class GlueWorkflow(Construct):
     def __init__(self, scope: Construct, id: str, s3_bucket, **kwargs) -> None:
         super().__init__(scope, id, **kwargs)
 
-        glue_queue = sqs.Queue(self, 'test_glue_queue')
-        s3_bucket.add_event_notification(s3.EventType.OBJECT_CREATED, s3_notifications.SqsDestination(glue_queue))
+        self.glue_queue = sqs.Queue(self, 'test_glue_queue')
+        s3_bucket.add_event_notification(s3.EventType.OBJECT_CREATED, s3_notifications.SqsDestination(self.glue_queue))
 
-        
+        self.glue_crawler = self.__create_glue_architecture__(s3_bucket)
+        self.__create_glue_workflow__(s3_bucket)
+
+        pass
+
+    def __create_glue_architecture__(self, s3_bucket) -> glue.CfnCrawler:
         glue_role = iam.Role(
             self,
             'glue_role',
@@ -76,16 +81,22 @@ class GlueWorkflow(Construct):
                 s3_targets=[
                     glue.CfnCrawler.S3TargetProperty(
                         path=f's3://{s3_bucket.bucket_name}/',
-                        event_queue_arn=glue_queue.queue_arn)
+                        event_queue_arn=self.glue_queue.queue_arn)
                     ]
                 ),
             recrawl_policy=glue.CfnCrawler.RecrawlPolicyProperty(
                 recrawl_behavior='CRAWL_EVENT_MODE'
+                ),
+            schema_change_policy=glue.CfnCrawler.SchemaChangePolicyProperty(
+                update_behavior="UPDATE_IN_DATABASE"
                 )
             )
         
         glue_crawler.add_dependency(glue_database)
-        
+
+        return glue_crawler
+    
+    def __create_glue_workflow__(self, s3_bucket):
         glue_workflow = glue.CfnWorkflow(
             self, 
             'glue_workflow',
@@ -99,7 +110,7 @@ class GlueWorkflow(Construct):
             name='glue_crawler_trigger',
             actions=[
                 glue.CfnTrigger.ActionProperty(
-                    crawler_name=glue_crawler.name,
+                    crawler_name=self.glue_crawler.name,
                     notification_property=glue.CfnTrigger.NotificationPropertyProperty(notify_delay_after=3),
                     timeout=3
                     )
@@ -109,7 +120,7 @@ class GlueWorkflow(Construct):
         )
 
         glue_trigger.add_dependency(glue_workflow)
-        glue_trigger.add_dependency(glue_crawler)
+        glue_trigger.add_dependency(self.glue_crawler)
 
         rule_role = iam.Role(
             self,
@@ -150,7 +161,6 @@ class GlueWorkflow(Construct):
                     },
                 "source": ["aws.s3"]})
 
-        pass
 
     def __output__(self):
         CfnOutput(self, 'Pipeline ARN', value=self.pipeline.pipeline_arn)
