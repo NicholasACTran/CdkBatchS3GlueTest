@@ -11,6 +11,10 @@ def get_first_items_page(apiUrl, headers, board_id):
     query_item = f"""
     query {{
         boards (ids: [{board_id}]){{
+            columns {{
+                    id,
+                    title
+                }}
             items_page (limit:500){{
                 cursor
                     items {{
@@ -34,7 +38,7 @@ def get_first_items_page(apiUrl, headers, board_id):
 
     data = {"query": query_item}
     r = requests.post(url=apiUrl, json=data, headers=headers)
-    print(r.json())
+    # print(r.json())
     return r.json()
 
 def write_parquet_to_s3(file_name_str, df, dest_s3path_str):
@@ -89,15 +93,19 @@ if __name__ == '__main__':
             .get("items", None)
         )
 
+        data_columns = (
+            response.get("data", None)
+            .get("boards", None)[0]
+            .get("columns", None)
+        )
+
         normalized_data = []
+
+        columns_lambda = lambda id : [column for column in data_columns if column['id'] == id][0]['title']
 
         for item in data:
             flattened_item = {
-                i['id']:{
-                    'text': i['text'],
-                    'type': i['type'],
-                    'value': i['value']
-                } for i in item['column_values']
+                columns_lambda(i['id']):i['value'] for i in item['column_values']
             }
             flattened_item['id'] = item['id']
             flattened_item['created_at'] = item['created_at']
